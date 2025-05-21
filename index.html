@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Config Manager</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --success-color: #2ecc71;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            display: flex;
+            align-items: center;
+            font-size: 1.8rem; /* Base size */
+        }
+        
+        header h1 svg {
+            margin-right: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin: 20px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--dark-color);
+            position: relative;
+            white-space: nowrap; /* Prevent button text from wrapping */
+        }
+        
+        .tab-btn.active {
+            color: var(--secondary-color);
+        }
+        
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--secondary-color);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button, .btn {
+            padding: 10px 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover, .btn:hover {
+            background-color: var(--primary-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--accent-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: var(--light-color);
+            font-weight: 600;
+        }
+        
+        tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .notification {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            color: white;
+            display: none;
+        }
+        
+        .notification.success {
+            background-color: var(--success-color);
+            display: block;
+        }
+        
+        .notification.error {
+            background-color: var(--accent-color);
+            display: block;
+        }
+        
+        #importForm, #templateSettings { /* templateSettings is not used, but importForm is */
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .toggle-section {
+            margin-top: 10px;
+            color: var(--secondary-color);
+            cursor: pointer;
+            text-decoration: underline;
+            margin-bottom: 15px; /* Added margin for better spacing */
+        }
+        
+        #previewConfig { /* For ipsec.conf preview */
+            font-family: monospace;
+            white-space: pre; /* Important: no wrap, horizontal scroll */
+            overflow-x: auto;
+            background-color: #f8f8f8;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Corrected selector and styles for the template variables <pre> tag */
+        #templates .form-group pre { 
+            font-family: monospace;
+            white-space: pre-wrap;   /* Wrap long lines */
+            word-break: break-word;  /* Break words if they are too long */
+            background-color: #f8f8f8;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            overflow-x: auto; /* Fallback scroll if something is still too wide */
+            -webkit-overflow-scrolling: touch;
+            margin-top: 5px; /* Space between label and pre */
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .loading::after {
+            content: '';
+            width: 30px;
+            height: 30px;
+            border: 5px solid #ddd;
+            border-top: 5px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .responsive-button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px; /* Add some top margin before button groups */
+        }
+        .responsive-button-group .btn {
+            flex-grow: 1;
+            min-width: calc(50% - 5px); 
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+            header h1 svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+            .tab-btn {
+                padding: 8px 15px;
+                font-size: 15px;
+                flex-shrink: 0; /* Prevent tabs from shrinking too much */
+            }
+
+            .grid {
+                grid-template-columns: 1fr; /* Already existed, confirmed good */
+            }
+
+            #clients .card { /* Make client list table scrollable */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 14px;
+            }
+            .action-btns {
+                flex-wrap: wrap; 
+            }
+            .action-btns .btn {
+                padding: 6px 10px;
+                font-size: 14px;
+                flex-grow: 1; 
+            }
+
+            #previewConfig, #templates .form-group pre {
+                font-size: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                font-size: 15px;
+            }
+            .container {
+                padding: 10px;
+            }
+
+            header {
+                padding: 0.8rem 10px;
+            }
+            header h1 {
+                font-size: 1.3rem;
+            }
+
+            .tab-btn {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+
+            input, select, textarea {
+                font-size: 15px;
+                padding: 8px;
+            }
+            button, .btn {
+                font-size: 15px;
+                padding: 8px 15px;
+            }
+            
+            .action-btns {
+                flex-direction: column;
+                align-items: stretch; 
+                gap: 5px;
+            }
+            .action-btns .btn {
+                width: 100%;
+                text-align: center;
+                margin-bottom: 5px;
+            }
+             .action-btns .btn:last-child {
+                margin-bottom: 0;
+            }
+
+            .responsive-button-group .btn {
+                width: 100%;
+                flex-grow: 0;
+                min-width: 100%;
+                margin-bottom: 10px; /* Ensures spacing when stacked */
+            }
+            .responsive-button-group .btn:last-child {
+                margin-bottom: 0;
+            }
+            .responsive-button-group {
+                 margin-bottom: 0; /* Remove bottom margin if buttons are last in card */
+            }
+
+
+            .grid {
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                VPN Config Manager
+            </h1>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div id="notification" class="notification"></div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="clients">Beneficiari</button>
+            <button class="tab-btn" data-tab="add">Adaugă Beneficiar</button>
+            <button class="tab-btn" data-tab="import">Import/Export</button>
+            <button class="tab-btn" data-tab="templates">Template-uri</button>
+            <button class="tab-btn" data-tab="settings">Setări</button>
+        </div>
+        
+        <div id="clients" class="tab-content active">
+            <h2>Lista Beneficiari</h2>
+            <div class="card">
+                <input type="text" id="searchClients" placeholder="Caută beneficiari..." style="margin-bottom: 15px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nume</th>
+                            <th>Local ID</th>
+                            <th>Server VPN</th>
+                            <th>Username</th>
+                            <th>Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientsTable">
+                        <tr>
+                            <td>Client Demo Lung Nume Test Overflow</td>
+                            <td>dummy-disco-demo-long-id-test</td>
+                            <td>vpn.cloud.example-domain-long.ro</td>
+                            <td>user_demo_very_long_username_test</td>
+                            <td class="action-btns">
+                                <button class="btn">Editează</button>
+                                <button class="btn">Generează</button>
+                                <button class="btn btn-danger">Șterge</button>
+                            </td>
+                        </tr>
+                         <tr>
+                            <td>Client Altul</td>
+                            <td>alt-client-id</td>
+                            <td>vpn.altserver.com</td>
+                            <td>user_alt</td>
+                            <td class="action-btns">
+                                <button class="btn">Editează</button>
+                                <button class="btn">Generează</button>
+                                <button class="btn btn-danger">Șterge</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="add" class="tab-content">
+            <h2>Adaugă Beneficiar Nou</h2>
+            <div class="card">
+                <form id="addClientForm">
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="name">Nume Beneficiar *</label>
+                            <input type="text" id="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="localId">Local ID *</label>
+                            <input type="text" id="localId" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="username">Username *</label>
+                            <input type="text" id="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Parolă *</label>
+                            <input type="password" id="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="psk">Pre-Shared Key (PSK) *</label>
+                            <input type="text" id="psk" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vpnServer">Server VPN *</label>
+                            <input type="text" id="vpnServer" required>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-section" id="toggleAdvanced">Arată setări avansate</div>
+                    
+                    <div id="advancedSettings" style="display: none;">
+                        <div class="grid">
+                            <div class="form-group">
+                                <label for="rightSubnet">Subnet Rută</label>
+                                <input type="text" id="rightSubnet" value="0.0.0.0/0">
+                            </div>
+                            <div class="form-group">
+                                <label for="ikeProposal">Proposal IKE</label>
+                                <input type="text" id="ikeProposal" value="aes256-sha1-modp1536!">
+                            </div>
+                            <div class="form-group">
+                                <label for="espProposal">Proposal ESP</label>
+                                <input type="text" id="espProposal" value="aes256-sha1!">
+                            </div>
+                            <div class="form-group">
+                                <label for="dpdDelay">DPD Delay (secunde)</label>
+                                <input type="number" id="dpdDelay" value="30">
+                            </div>
+                            <div class="form-group">
+                                <label for="dpdTimeout">DPD Timeout (secunde)</label>
+                                <input type="number" id="dpdTimeout" value="120">
+                            </div>
+                            <div class="form-group">
+                                <label for="adminEmail">Email Administrator</label>
+                                <input type="email" id="adminEmail" value="admin@company.ro">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-section" id="togglePreview">Previzualizare configurație</div>
+                    
+                    <div id="previewContainer" style="display: none; margin-bottom: 15px;">
+                        <h3>Previzualizare ipsec.conf</h3>
+                        <pre id="previewConfig"></pre>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">Salvează Beneficiar</button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="import" class="tab-content">
+            <h2>Import/Export Beneficiari</h2>
+            <div class="card">
+                <div class="responsive-button-group" style="margin-top:0;"> <!-- First element in card, no top margin -->
+                    <button id="exportBtn" class="btn">Exportă toți beneficiarii (CSV)</button>
+                    <button id="exportSelectedBtn" class="btn">Exportă beneficiarii selectați (CSV)</button>
+                    <button id="showImportForm" class="btn">Import Beneficiari</button>
+                </div>
+                
+                <div id="importForm"> <!-- Toggled content -->
+                    <h3>Import din CSV</h3>
+                    <form id="csvImportForm">
+                        <div class="form-group">
+                            <label for="csvFile">Fișier CSV</label>
+                            <input type="file" id="csvFile" accept=".csv">
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="hasHeader" checked>
+                                Fișierul are antet
+                            </label>
+                        </div>
+                        <button type="submit" class="btn">Importă</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Generează Configurații</h3>
+                <p>Generează și descarcă configurațiile VPN pentru beneficiarii selectați.</p>
+                <div class="form-group">
+                    <label for="configFormat">Format</label>
+                    <select id="configFormat">
+                        <option value="zip">ZIP (arhivă)</option>
+                        <option value="deb">DEB (pachet Debian)</option>
+                        <option value="rpm">RPM (pachet Red Hat)</option>
+                    </select>
+                </div>
+                <div class="responsive-button-group">
+                    <button id="generateAllBtn" class="btn btn-success">Generează pentru toți</button>
+                    <button id="generateSelectedBtn" class="btn">Generează pentru selectați</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="templates" class="tab-content">
+            <h2>Template-uri Configurații</h2>
+            <div class="card">
+                <div class="form-group">
+                    <label for="templateType">Tip Template</label>
+                    <select id="templateType">
+                        <option value="ipsec.conf">ipsec.conf</option>
+                        <option value="ipsec.secrets">ipsec.secrets</option>
+                        <option value="readme">README.md</option>
+                        <option value="install">install.sh</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="templateContent">Conținut Template</label>
+                    <textarea id="templateContent" rows="15"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Variabile disponibile:</label>
+                    <pre>{{ client_name }}, {{ local_id }}, {{ username }}, {{ password }}, {{ psk }}, {{ vpn_server }}, {{ right_subnet }}, {{ ike_proposal }}, {{ esp_proposal }}, {{ dpd_delay }}, {{ dpd_timeout }}, {{ admin_email }}, {{ date }}</pre>
+                </div>
+                
+                <div class="responsive-button-group">
+                     <button id="saveTemplateBtn" class="btn">Salvează Template</button>
+                     <button id="resetTemplateBtn" class="btn btn-danger">Resetează la valorile implicite</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="settings" class="tab-content">
+            <h2>Setări Generale</h2>
+            <div class="card">
+                <div class="form-group">
+                    <label for="defaultVpnServer">Server VPN implicit</label>
+                    <input type="text" id="defaultVpnServer" value="vpn.cloud.ro">
+                </div>
+                
+                <div class="form-group">
+                    <label for="defaultIkeProposal">Proposal IKE implicit</label>
+                    <input type="text" id="defaultIkeProposal" value="aes256-sha1-modp1536!">
+                </div>
+                
+                <div class="form-group">
+                    <label for="defaultEspProposal">Proposal ESP implicit</label>
+                    <input type="text" id="defaultEspProposal" value="aes256-sha1!">
+                </div>
+                
+                <div class="form-group">
+                    <label for="defaultAdminEmail">Email Administrator implicit</label>
+                    <input type="email" id="defaultAdminEmail" value="admin@company.ro">
+                </div>
+                
+                <div class="form-group">
+                    <label for="databaseLocation">Locație bază de date</label>
+                    <input type="text" id="databaseLocation" value="clients.json">
+                </div>
+                
+                <div class="form-group">
+                    <label for="backupInterval">Interval backup (zile)</label>
+                    <input type="number" id="backupInterval" value="7">
+                </div>
+                
+                <div class="responsive-button-group">
+                     <button id="saveSettingsBtn" class="btn">Salvează Setări</button>
+                     <button id="backupNowBtn" class="btn">Crează Backup Acum</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.getAttribute('data-tab');
+                    
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    btn.classList.add('active');
+                    const activeTabContent = document.getElementById(tabId);
+                    if (activeTabContent) {
+                        activeTabContent.classList.add('active');
+                    }
+                });
+            });
+            
+            const toggleAdvancedEl = document.getElementById('toggleAdvanced');
+            if (toggleAdvancedEl) {
+                toggleAdvancedEl.addEventListener('click', () => {
+                    const advancedSection = document.getElementById('advancedSettings');
+                    if (!advancedSection) return;
+                    
+                    if (advancedSection.style.display === 'none' || advancedSection.style.display === '') {
+                        advancedSection.style.display = 'grid'; // It's a grid
+                        toggleAdvancedEl.textContent = 'Ascunde setări avansate';
+                    } else {
+                        advancedSection.style.display = 'none';
+                        toggleAdvancedEl.textContent = 'Arată setări avansate';
+                    }
+                });
+            }
+            
+            const togglePreviewEl = document.getElementById('togglePreview');
+            if (togglePreviewEl) {
+                togglePreviewEl.addEventListener('click', () => {
+                    const previewContainer = document.getElementById('previewContainer');
+                    if (!previewContainer) return;
+
+                    if (previewContainer.style.display === 'none' || previewContainer.style.display === '') {
+                        previewContainer.style.display = 'block';
+                        togglePreviewEl.textContent = 'Ascunde previzualizare';
+                        generatePreview();
+                    } else {
+                        previewContainer.style.display = 'none';
+                        togglePreviewEl.textContent = 'Previzualizare configurație';
+                    }
+                });
+            }
+            
+            const showImportFormEl = document.getElementById('showImportForm');
+            if (showImportFormEl) {
+                showImportFormEl.addEventListener('click', () => {
+                    const importForm = document.getElementById('importForm');
+                    if (!importForm) return;
+                    if (importForm.style.display === 'none' || importForm.style.display === '') {
+                        importForm.style.display = 'block';
+                    } else {
+                        importForm.style.display = 'none';
+                    }
+                });
+            }
+            
+            function generatePreview() {
+                const previewConfigEl = document.getElementById('previewConfig');
+                if (!previewConfigEl) return;
+
+                const name = document.getElementById('name')?.value || 'nume-client';
+                const localId = document.getElementById('localId')?.value || 'local-id';
+                const vpnServer = document.getElementById('vpnServer')?.value || 'vpn.cloud.ro';
+                const rightSubnet = document.getElementById('rightSubnet')?.value || '0.0.0.0/0';
+                const ikeProposal = document.getElementById('ikeProposal')?.value || 'aes256-sha1-modp1536!';
+                const espProposal = document.getElementById('espProposal')?.value || 'aes256-sha1!';
+                const dpdDelay = document.getElementById('dpdDelay')?.value || '30';
+                const dpdTimeout = document.getElementById('dpdTimeout')?.value || '120';
+                
+                const configPreview = `# /etc/ipsec.conf - strongSwan IPsec configuration file
+# Generat automat pentru ${name}
+
+config setup
+    # charondebug="ike 2, knl 2, cfg 2, net 2, esp 2, dmn 2, mgr 2"
+    
+conn ${name}-vpn
+    auto=add
+    keyexchange=ikev1
+    ike=${ikeProposal}
+    esp=${espProposal}
+    
+    # Adresa serverului FortiGate
+    right=${vpnServer}
+    rightsubnet=${rightSubnet}
+    rightauth=psk
+    
+    # Configurație client
+    left=%defaultroute
+    leftid=@${localId}
+    leftauth=psk
+    leftauth2=xauth
+    leftsourceip=%config
+    
+    # Opțiuni IKEv1
+    fragmentation=yes
+    forceencaps=yes
+    dpdaction=restart
+    dpddelay=${dpdDelay}
+    dpdtimeout=${dpdTimeout}
+    
+    # Încercați din nou conexiunea dacă se întrerupe
+    closeaction=restart`;
+                
+                previewConfigEl.textContent = configPreview;
+            }
+            
+            const addClientFormEl = document.getElementById('addClientForm');
+            if (addClientFormEl) {
+                addClientFormEl.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const notification = document.getElementById('notification');
+                    if(notification) {
+                        notification.textContent = 'Beneficiarul a fost adăugat cu succes!';
+                        notification.className = 'notification success';
+                        setTimeout(() => {
+                            notification.className = 'notification';
+                            notification.textContent = '';
+                        }, 3000);
+                    }
+                    // addClientFormEl.reset(); 
+                });
+            }
+            
+            const templateTypeEl = document.getElementById('templateType');
+            if (templateTypeEl) {
+                const templateContentEl = document.getElementById('templateContent');
+
+                function updateTemplateContent() {
+                    if (!templateContentEl) return;
+                    const templateType = templateTypeEl.value;
+                    let content = '';
+                    const currentDate = new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                    switch(templateType) {
+                        case 'ipsec.conf':
+                            content = `# /etc/ipsec.conf - strongSwan IPsec configuration file
+# Generat automat la ${currentDate} pentru {{ client_name }}
+
+config setup
+    # charondebug="ike 2, knl 2, cfg 2, net 2, esp 2, dmn 2, mgr 2"
+    
+conn {{ client_name }}-vpn
+    auto=add
+    keyexchange=ikev1
+    ike={{ ike_proposal }}
+    esp={{ esp_proposal }}
+    
+    # Adresa serverului VPN
+    right={{ vpn_server }}
+    rightsubnet={{ right_subnet }}
+    rightauth=psk
+    
+    # Configurație client
+    left=%defaultroute
+    leftid=@{{ local_id }}
+    leftauth=psk
+    leftauth2=xauth
+    leftsourceip=%config
+    
+    # Opțiuni IKEv1
+    fragmentation=yes
+    forceencaps=yes
+    dpdaction=restart
+    dpddelay={{ dpd_delay }}
+    dpdtimeout={{ dpd_timeout }}
+    
+    # Încercați din nou conexiunea dacă se întrerupe
+    closeaction=restart`;
+                            break;
+                        case 'ipsec.secrets':
+                            content = `# /etc/ipsec.secrets - strongSwan IPsec secrets file
+# Generat automat la ${currentDate} pentru {{ client_name }}
+
+# Format: <Local ID> <Remote ID> : PSK <cheie_preshared>
+@{{ local_id }} {{ vpn_server }} : PSK "{{ psk }}"
+
+# Format pentru autentificare XAUTH (username și parolă)
+{{ username }} : XAUTH "{{ password }}"`;
+                            break;
+                        case 'readme':
+                            content = `# Instrucțiuni configurare VPN pentru {{ client_name }}
+# Generat la ${currentDate}
+
+Acest document conține instrucțiunile pentru configurarea clientului VPN IPsec.
+
+## Prerechizite
+Asigurați-vă că aveți instalate pachetele necesare. Pe sisteme Debian/Ubuntu:
+\`\`\`
+sudo apt update
+sudo apt install -y strongswan strongswan-swanctl libcharon-extra-plugins
+\`\`\`
+Pe sisteme CentOS/RHEL/Fedora:
+\`\`\`
+sudo yum install -y strongswan # sau dnf
+\`\`\`
+
+## Fișiere de Configurare
+Veți primi două fișiere principale:
+1.  \`ipsec.conf\`: Conține configurația conexiunii VPN.
+2.  \`ipsec.secrets\`: Conține cheile pre-partajate (PSK) și credențialele XAUTH. **Acest fișier este sensibil și trebuie protejat.**
+
+## Pași de Instalare
+1.  Copiați fișierele de configurație în directoarele corespunzătoare:
+    \`\`\`bash
+    sudo cp ipsec.conf /etc/ipsec.conf
+    sudo cp ipsec.secrets /etc/ipsec.secrets
+    \`\`\`
+
+2.  Setați permisiunile corecte pentru fișierul de secreте (foarte important):
+    \`\`\`bash
+    sudo chmod 600 /etc/ipsec.secrets
+    sudo chown root:root /etc/ipsec.conf /etc/ipsec.secrets
+    \`\`\`
+
+3.  Reporniți serviciul strongSwan (sau ipsec):
+    \`\`\`bash
+    sudo systemctl restart strongswan
+    # sau 'sudo systemctl restart ipsec', în funcție de distribuție
+    \`\`\`
+
+4.  Porniți conexiunea VPN:
+    \`\`\`bash
+    sudo ipsec up {{ client_name }}-vpn
+    \`\`\`
+    Numele conexiunii (\`{{ client_name }}-vpn\`) este specificat în \`ipsec.conf\`.
+
+5.  Verificați statusul conexiunii:
+    \`\`\`bash
+    sudo ipsec status
+    # sau 'sudo ipsec statusall' pentru detalii
+    \`\`\`
+    Ar trebui să vedeți conexiunea ca fiind stabilită (ESTABLISHED).
+
+## Depanare
+*   Verificați logurile strongSwan (de obicei în \`/var/log/syslog\`, \`/var/log/auth.log\` sau via \`journalctl -u strongswan\`).
+*   Asigurați-vă că setările firewall (local sau de rețea) permit traficul UDP pe porturile 500 și 4500, și protocolul ESP (protocol 50).
+*   Verificați corectitudinea datelor din \`ipsec.secrets\`.
+
+## Oprire Conexiune
+Pentru a opri conexiunea VPN:
+\`\`\`bash
+sudo ipsec down {{ client_name }}-vpn
+\`\`\`
+
+## Informații de contact
+Pentru suport tehnic, contactați administratorul VPN la: {{ admin_email }}`;
+                            break;
+                        case 'install':
+                            content = `#!/bin/bash
+# Script de instalare automată VPN pentru {{ client_name }}
+# Generat la ${currentDate}
+
+echo "======================================================"
+echo " Instalare configurație VPN pentru {{ client_name }} "
+echo "======================================================"
+
+# Verificare drepturi de root
+if [ "$(id -u)" -ne 0 ]; then
+   echo "EROARE: Acest script trebuie rulat ca root (sudo)." 
+   exit 1
+fi
+
+# Detectare manager de pachete
+PKG_MANAGER=""
+if command -v apt-get &> /dev/null; then
+    PKG_MANAGER="apt"
+elif command -v yum &> /dev/null; then
+    PKG_MANAGER="yum"
+elif command -v dnf &> /dev/null; then
+    PKG_MANAGER="dnf"
+else
+    echo "EROARE: Nu s-a putut detecta un manager de pachete suportat (apt, yum, dnf)."
+    exit 1
+fi
+
+echo "Utilizare manager de pachete: $PKG_MANAGER"
+
+# Instalare dependințe
+echo "Instalare strongSwan și plugin-uri..."
+if [ "$PKG_MANAGER" == "apt" ]; then
+    apt update
+    apt install -y strongswan strongswan-swanctl libcharon-extra-plugins
+elif [ "$PKG_MANAGER" == "yum" ] || [ "$PKG_MANAGER" == "dnf" ]; then
+    $PKG_MANAGER install -y strongswan # Pe RHEL/CentOS, plugin-urile XAUTH sunt de obicei incluse
+fi
+
+if ! command -v ipsec &> /dev/null; then
+    echo "EROARE: Instalarea strongSwan a eșuat sau comanda 'ipsec' nu este disponibilă."
+    exit 1
+fi
+echo "strongSwan instalat cu succes."
+
+# Creare fișiere de configurare direct în script (pentru portabilitate)
+echo "Creare /etc/ipsec.conf..."
+cat > /etc/ipsec.conf << EOF
+# /etc/ipsec.conf - strongSwan IPsec configuration file
+# Generat automat la ${currentDate} pentru {{ client_name }}
+
+config setup
+    # charondebug="ike 2, knl 2, cfg 2, net 2, esp 2, dmn 2, mgr 2"
+    
+conn {{ client_name }}-vpn
+    auto=add
+    keyexchange=ikev1
+    ike={{ ike_proposal }}
+    esp={{ esp_proposal }}
+    
+    right={{ vpn_server }}
+    rightsubnet={{ right_subnet }}
+    rightauth=psk
+    
+    left=%defaultroute
+    leftid=@{{ local_id }}
+    leftauth=psk
+    leftauth2=xauth
+    leftsourceip=%config
+    
+    fragmentation=yes
+    forceencaps=yes
+    dpdaction=restart
+    dpddelay={{ dpd_delay }}
+    dpdtimeout={{ dpd_timeout }}
+    closeaction=restart
+EOF
+
+echo "Creare /etc/ipsec.secrets..."
+cat > /etc/ipsec.secrets << EOF
+# /etc/ipsec.secrets - strongSwan IPsec secrets file
+# Generat automat la ${currentDate} pentru {{ client_name }}
+
+@{{ local_id }} {{ vpn_server }} : PSK "{{ psk }}"
+{{ username }} : XAUTH "{{ password }}"
+EOF
+
+echo "Setare permisiuni pentru fișierele de configurație..."
+chmod 600 /etc/ipsec.secrets
+chown root:root /etc/ipsec.conf /etc/ipsec.secrets
+
+echo "Repornire serviciu strongSwan..."
+if systemctl list-units --type=service | grep -q 'strongswan.service'; then
+    systemctl restart strongswan
+elif systemctl list-units --type=service | grep -q 'ipsec.service'; then
+    systemctl restart ipsec
+else
+    echo "AVERTISMENT: Nu s-a putut determina numele serviciului strongSwan/ipsec pentru repornire."
+    echo "Vă rugăm reporniți manual serviciul."
+fi
+
+echo "========================================================="
+echo " Configurația VPN pentru {{ client_name }} a fost instalată."
+echo " Puteți porni VPN-ul cu comanda:"
+echo "   sudo ipsec up {{ client_name }}-vpn"
+echo ""
+echo " Pentru a verifica statusul:"
+echo "   sudo ipsec status"
+echo "========================================================="
+`;
+                            break;
+                    }
+                    templateContentEl.value = content;
+                }
+                
+                templateTypeEl.addEventListener('change', updateTemplateContent);
+                updateTemplateContent(); // Inițializăm conținutul la încărcare
+            }
+        });
+    </script>
+</body>
+</html>
